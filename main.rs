@@ -1,10 +1,10 @@
 use std::{fs, cmp::Ordering, io};
 
-const TOTAL_WORDS: usize = 14855; // Total possible wordle words
-const LETTER_SCORES: [i32; 26] = [7128, 1849, 2246, 2735, 7455, 1240, 1864, 1993, 4381, 342, 1753, 3780, 2414, 3478, 5212, 2436, 145, 4714, 7319, 3707, 2927, 801, 1127, 326, 2400, 503]; // The frequency of each letter in the possible wordle words
+const TOTAL_WORDS: usize = 10638; // Total possible wordle words
+const LETTER_SCORES: [f32; 26] = [0.09596769, 0.024893975, 0.030238977, 0.036822617, 0.10037024, 0.016694715, 0.025095927, 0.026832717, 0.05898351, 0.0046045105, 0.023601482, 0.050891954, 0.03250084, 0.046825986, 0.07017166, 0.03279704, 0.0019522046, 0.06346685, 0.09853921, 0.049909122, 0.039407607, 0.010784248, 0.015173342, 0.0043890947, 0.032312352, 0.0067721307]; // The relative frequency of each letter in the possible wordle words
 static mut WORDS: [[u8; 5]; TOTAL_WORDS] = [[0u8; 5]; TOTAL_WORDS]; // The array of all possible wordle words
 
-// This function loads all possible worlde words into the WORDS array
+// This function loads all possible wordle words into the WORDS array
 fn load_words(){
     let words_bytes = fs::read("words.txt").expect("Could not find \"words.txt\"");
     for i in 0..TOTAL_WORDS {
@@ -20,12 +20,12 @@ fn load_words(){
 
 // This function return a value on how common a word is, the higher the better
 // If a letter is repeated in the word, it counts for less
-fn word_score(word: &[u8; 5]) -> i32 {
-    let mut score: i32 = 0;
+fn word_score(word: &[u8; 5]) -> f32 {
+    let mut l_score: f32 = 0.0;
     for letter in word {
-        score += LETTER_SCORES[(letter - 97) as usize]/(word.iter().filter(|&n| *n == *letter).count() as i32);
+        l_score += LETTER_SCORES[(letter - 97) as usize] / (word.iter().filter(|&n| *n == *letter).count() as f32 + 1.0);
     }
-    return score;
+    return l_score;
 }
 
 // This finds the "best word" in an array of words according to the word_score function
@@ -33,9 +33,9 @@ fn best_word(words: &Vec<[u8; 5]>) -> [u8; 5] {
     let Some(guess) = 
         words.iter()
             .max_by(|a, b| match (word_score(a)-word_score(b)).signum() {
-                1  => Ordering::Greater,
-                0  => Ordering::Equal,
-                -1 => Ordering::Less,
+                1.0  => Ordering::Greater,
+                0.0  => Ordering::Equal,
+                -1.0 => Ordering::Less,
                 _  => Ordering::Equal,
             })
         else { panic!(); };
@@ -54,6 +54,7 @@ enum Filter {
     Black(u8),
 }
 
+// This filters the list of remaining possible words using the color data
 fn filter_words(mut words: Vec<[u8; 5]>, filters: &Vec<Filter>) -> Vec<[u8; 5]>{
     for filter in filters {
         match filter {
@@ -77,8 +78,8 @@ fn filter_words(mut words: Vec<[u8; 5]>, filters: &Vec<Filter>) -> Vec<[u8; 5]>{
     return words;
 }
 
-fn prompt_input(prompt: &str) -> String{
-    println!("{}",prompt);
+fn prompt_input(prompt: &str) -> String {
+    println!("{}", prompt);
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
         Ok(_goes_into_input_above) => {},
