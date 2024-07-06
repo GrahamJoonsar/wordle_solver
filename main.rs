@@ -1,4 +1,4 @@
-use std::{fs, cmp::Ordering};
+use std::{fs, cmp::Ordering, io};
 
 const TOTAL_WORDS: usize = 14855; // Total possible wordle words
 const LETTER_SCORES: [i32; 26] = [7128, 1849, 2246, 2735, 7455, 1240, 1864, 1993, 4381, 342, 1753, 3780, 2414, 3478, 5212, 2436, 145, 4714, 7319, 3707, 2927, 801, 1127, 326, 2400, 503]; // The frequency of each letter in the possible wordle words
@@ -29,7 +29,7 @@ fn word_score(word: &[u8; 5]) -> i32 {
 }
 
 // This finds the "best word" in an array of words according to the word_score function
-fn best_word(words: Vec<[u8; 5]>) -> [u8; 5] {
+fn best_word(words: &Vec<[u8; 5]>) -> [u8; 5] {
     let Some(guess) = 
         words.iter()
             .max_by(|a, b| match (word_score(a)-word_score(b)).signum() {
@@ -77,8 +77,41 @@ fn filter_words(mut words: Vec<[u8; 5]>, filters: &Vec<Filter>) -> Vec<[u8; 5]>{
     return words;
 }
 
+fn prompt_input(prompt: &str) -> String{
+    println!("{}",prompt);
+    let mut input = String::new();
+    match io::stdin().read_line(&mut input) {
+        Ok(_goes_into_input_above) => {},
+        Err(_no_updates_is_fine) => {},
+    }
+    return input.trim().to_string();
+}
+
+fn collect_input() -> Vec<Filter> {
+    println!("Input the word that you entered, and after its color result (i.e. gyyby)");
+    let guess = prompt_input("Enter your word: ");
+    let color = prompt_input("Enter the colors: ");
+
+    let mut filters: Vec<Filter> = vec![];
+    for i in 0..5 {
+        filters.push (match color.chars().nth(i).unwrap() {
+            'g' => Filter::Green(guess.chars().nth(i).unwrap() as u8, i),
+            'y' => Filter::Yellow(guess.chars().nth(i).unwrap() as u8, i),
+            'b' => Filter::Black(guess.chars().nth(i).unwrap() as u8),
+            _   => Filter::Black(0),
+        })
+    }
+
+    return filters;
+}
+
 fn main() {
     load_words();
-    let vec_words: Vec<[u8; 5]> = unsafe { WORDS.to_vec() };
-    println!("{:?}", filter_words(vec_words, &vec![Filter::Black(97), Filter::Black(97 + 4), Filter::Black(99), Filter::Green(97 + 25, 0)]));
+    let mut vec_words: Vec<[u8; 5]> = unsafe { WORDS.to_vec() };
+    println!("Welcome to Wordle Solver!");
+    println!("(We recommend that you start your game with 'adieu')");
+    while vec_words.len() > 1 {
+        vec_words = filter_words(vec_words, &collect_input());
+        println!("We suggest: {}", word_to_string(&best_word(&vec_words)));
+    }
 }
